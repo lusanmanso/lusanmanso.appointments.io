@@ -1,4 +1,5 @@
 import java.rmi.Naming;
+import java.rmi.Remote;
 import java.rmi.RemoteException; // RemoteExceptions for RMI 
 import java.rmi.server.UnicastRemoteObject; // RMI Classes implementation
 
@@ -41,9 +42,17 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
+    private boolean isValidEmail(String email) {
+        return email.matches("^[A-Za-z0-9+_.-]+@(.+)$"); 
+    }
+
     @Override
     public void registerUser(String email, String password) throws RemoteException {
         try (Connection conn = MySQLConnection.getConnection()) {
+            if (!isValidEmail(email)) {
+                throw new RemoteException(("Invalid email format."));
+            }
+            
             // Cipher passwords for further security
             String hashedPassword = hashPassword(password);
 
