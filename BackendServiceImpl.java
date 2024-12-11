@@ -93,6 +93,14 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setInt(1, appointmentId);
 
+            int rowsAffected = stmt.executeUpdate();
+
+            if (rowsAffected == 0) {
+                throw new RemoteException("The appointment does not exist.");
+            }
+
+            System.out.println("Appointment cancelled successfully.");
+
         } catch (SQLException e) {
             e.printStackTrace();
             throw new RemoteException("Error cancelling appointment.");
