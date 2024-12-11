@@ -1,7 +1,16 @@
-import java.rmi.server.UnicastRemoteObject;
-import java.rmi.RemoteException;
+import java.rmi.RemoteException; // RemoteExceptions for RMI 
+import java.rmi.server.UnicastRemoteObject; // RMI Classes implementation
+import java.sql.Connection; // Handle JDBC connections
+import java.sql.PreparedStatement; // Handle prepared SQL statements
+import java.sql.ResultSet; // PHandle SQL results
+import java.sql.SQLException; // Handle SQL errors
 import java.util.ArrayList;
 import java.util.List;
+
+// Password ciphering
+import java.nio.charset.StandardCharsets; // To work with UTF-8 encoding
+import java.security.MessageDigest; // Calculate (SHA-256) hashes
+import java.security.NoSuchAlgorithmException; // Exception if the hashing algorithm is not found
 
 public class BackendServiceImpl extends UnicastRemoteObject implements BackendServices {
 
