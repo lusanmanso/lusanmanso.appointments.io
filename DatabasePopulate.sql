@@ -1,3 +1,10 @@
+-- Insert clinics
+INSERT INTO Clinics (id, name) VALUES
+(1, 'Clinic A'),
+(2, 'Clinic B'),
+(3, 'Clinic C'),
+(4, 'Clinic D');
+
 -- Insert specialties for each clinic
 INSERT INTO Specialties (id, name, clinic_id) VALUES
 (1, 'General Practice', 1),
