@@ -115,8 +115,17 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             String sql = "SELECT appointments_slot FROM Appointments a " +
                          "JOIN Doctors d ON a.doctor_id = d.id " +
                          "WHERE d.specialty_id = ? AND d.clinic_id = ? AND a.appointment_date = ? ";
+            
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, specialtyId);
+            stmt.setInt(2, clinicId);
+            stmt.setString(3, date);
 
-
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                int bookedSlot = rs.getInt("appointments_slot");
+                availableSlots.remove(bookedSlot); // Delete occupied slots
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             throw new RemoteException("Error validating clinic and specialty.");
