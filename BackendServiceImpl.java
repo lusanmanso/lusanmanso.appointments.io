@@ -1,3 +1,4 @@
+import java.rmi.Naming;
 import java.rmi.RemoteException; // RemoteExceptions for RMI 
 import java.rmi.server.UnicastRemoteObject; // RMI Classes implementation
 import java.sql.Connection; // Handle JDBC connections
@@ -31,13 +32,13 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             stmt.setString(2, hashedPassword);
             stmt.executeUpdate();
 
-            System.out.println("Usuario registrado con éxito: " + email);
+            System.out.println("User succesfully registered: " + email);
         } catch (SQLException e) {
             if (e.getErrorCode() == 1062) { // Error code for duplicated keys
-                throw new RemoteException("El email ya está registrado.");
+                throw new RemoteException("The email is already registered.");
             }
             e.printStackTrace();
-            throw new RemoteException("Error al registrar el usuario.");
+            throw new RemoteException("Error registering user.");
         }
     }
 
@@ -54,16 +55,38 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             }
             return hexString.toString();
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error al cifrar la contraseña.", e);
+            throw new RuntimeException("Error ciphering password.", e);
         }
     }
 
     public void bookAppointment(int userId, int clinicId, int specialtyId, String dateTime) throws RemoteException {
-        System.out.println("Booking appointment for user " + userId + " at clinic " + clinicId + " with specialty " + specialtyId + " on " + dateTime);
+        try (Connection conn = MySQLConnection.getConnection()) {
+            // Verify the specialty belongs to the clinic
+            String checkSQL = "SELECT COUNT(*) FROM Specialties WHERE id = ? AND clinic_id = ?";
+            PreparedStatement checkStmt = conn.prepareStatement(checkSQL);
+            checkStmt.setInt(1, specialtyId);
+            checkStmt.setInt(2, clinicId);
+            ResultSet rs = checkStmt.executeQuery();
+            if (rs.next() && rs.getInt(1) == 0) {
+                throw new RemoteException("The specialty does not belong to the clinic.");
+            }
+
+            // Insert appointment
+            String sql = "INSERT INTO Appointments (user_id, specialty_id, date_time) VALUES (?, ?, ?)";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, userId);
+            stmt.setInt(2, specialtyId);
+            stmt.setString(3, dateTime);
+            stmt.executeUpdate();
+
+            System.out.println("Appointment booked successfully.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RemoteException("Error booking appointment.");
+        }
     }
 
     public void cancelAppointment(int appointmentId) throws RemoteException {
-        System.out.println("Cancelling appointment " + appointmentId);
     }
 
     public List<String> listAppointments(int userId) throws RemoteException {
