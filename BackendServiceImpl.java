@@ -200,6 +200,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     }
 
     /* 3. CANCEL APPOINTMENT */
+    @Override
     public void cancelAppointment(int appointmentId) throws RemoteException {
         try (Connection conn = MySQLConnection.getConnection()) {
             // Delete appointment
@@ -222,8 +223,32 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     }
 
     /* 4. LIST APPOINTMENTS */
+    @Override
     public List<String> listAppointments(int userId) throws RemoteException {
         List<String> appointments = new ArrayList<String>();
+        try (Connection conn = MySQLConnection.getConnection()) {
+        
+            String sql = "SELECT a.appointment_date, a.appointment_slot, d.name AS doctor_name, s.name AS specialty_name " +
+                        "FROM Appointments a " +
+                        "JOIN Doctors d ON a.doctor_id = d.id " +
+                        "JOIN Specialties s ON a.specialty_id = s.id " +
+                        "WHERE a.user_id = ?";
+            
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, userId);
+
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                String appointment = "Date: " + rs.getString("appointment_date") +
+                                     " Slot: " + rs.getString("appointment_slot") +
+                                     " Doctor: " + rs.getString("doctor_name") +
+                                     " Specialty: " + rs.getString("specialty_name");
+                appointments.add(appointment);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RemoteException("Error listing appointments.");
+        }
         return appointments;
     }
 }
