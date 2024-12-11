@@ -109,10 +109,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
 
     public List<String> listAppointments(int userId) throws RemoteException {
         List<String> appointments = new ArrayList<String>();
-        appointments.add("Lucy");
-        appointments.add("John");
-        appointments.add("Peter");
-        return appointments;
+        
     }
 
 }
