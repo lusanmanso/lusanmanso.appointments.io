@@ -87,6 +87,16 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     }
 
     public void cancelAppointment(int appointmentId) throws RemoteException {
+        try (Connection conn = MySQLConnection.getConnection()) {
+            // Delete appointment
+            String sql = "DELETE FROM Appointments WHERE id = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, appointmentId);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RemoteException("Error cancelling appointment.");
+        }
     }
 
     public List<String> listAppointments(int userId) throws RemoteException {
