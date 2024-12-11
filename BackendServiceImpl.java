@@ -85,6 +85,21 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
+    // Auxiliar method to convert slots to timetable
+    private String slotToTime(int slot) throws RemoteException {
+        String[] times = {
+            "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM",
+            "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM",
+            "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM"
+        };
+
+        // ? SHOULD THE COMPROBATION BE HERE?
+        if (slot < 1 || slot > 12) {
+            throw new RemoteException("Invalid slot number. Slots range from 1 to 12.");
+        }
+        return times[slot - 1];
+    }
+
     public Map<Integer, String> listAvailableSlots(int specialtyId, int clinicId, String date) throws RemoteException {
         
         Map<Integer, String> availableSlots = new HashMap<>();
@@ -93,7 +108,13 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             validateClinicExists(conn, clinicId);
             validateSpecialtyInClinic(conn, clinicId, specialtyId);
 
+            for (int i = 1; i <= 12; i++) {
+                availableSlots.put(i, slotToTime(i));
+            }
 
+            String sql = "SELECT appointments_slot FROM Appointments a " +
+                         "JOIN Doctors d ON a.doctor_id = d.id " +
+                         "WHERE d.specialty_id = ? AND d.clinic_id = ? AND a.appointment_date = ? ";
 
 
         } catch (SQLException e) {
