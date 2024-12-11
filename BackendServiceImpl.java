@@ -25,6 +25,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         super();
     }
 
+    /* 1. REGISTER USER */
     // First version of method to cipher passwords
     private String hashPassword(String password) {
         try {
@@ -38,7 +39,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             }
             return hexString.toString();
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error ciphering password.", e);
+            throw new RuntimeException("Error hashing password.", e);
         }
     }
 
@@ -52,7 +53,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             if (!isValidEmail(email)) {
                 throw new RemoteException(("Invalid email format."));
             }
-            
+
             // Cipher passwords for further security
             String hashedPassword = hashPassword(password);
 
@@ -73,6 +74,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
+    /* 2. BOOK APPOINTMENT */
     private void validateClinicExists(Connection conn, int clinicId) throws SQLException, RemoteException {
         String sql = "SELECT COUNT(*) FROM Clinics WHERE id = ?";
         PreparedStatement stmt = conn.prepareStatement(sql);
@@ -197,6 +199,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
+    /* 3. CANCEL APPOINTMENT */
     public void cancelAppointment(int appointmentId) throws RemoteException {
         try (Connection conn = MySQLConnection.getConnection()) {
             // Delete appointment
@@ -218,9 +221,9 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
+    /* 4. LIST APPOINTMENTS */
     public List<String> listAppointments(int userId) throws RemoteException {
         List<String> appointments = new ArrayList<String>();
         return appointments;
     }
-
 }
