@@ -1,4 +1,7 @@
+package frontend;
 import java.rmi.Naming;
+
+import backend.BackendServices;
 
 public class RMIClient {
     public static void main(String[] args) {
