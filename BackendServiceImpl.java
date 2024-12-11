@@ -64,10 +64,44 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
+    private void validateClinicExists(Connection conn, int clinicId) throws SQLException, RemoteException {
+        String sql = "SELECT COUNT(*) FROM Clinics WHERE id = ?";
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        stmt.setInt(1, clinicId);
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next() && rs.getInt(1) == 0) {
+            throw new RemoteException("Clinic does not exist.");
+        }
+    }
+
+    private void validateSpecialtyInClinic(Connection conn, int clinicId, int specialtyId) throws SQLException, RemoteException {
+        String sql = "SELECT COUNT(*) FROM Specialties WHERE id = ? AND clinic_id = ?";
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        stmt.setInt(1, specialtyId);
+        stmt.setInt(2, clinicId);
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next() && rs.getInt(1) == 0) {
+            throw new RemoteException("Specialty does not belong to the selected clinic.");
+        }
+    }
+
     public Map<Integer, String> listAvailableSlots(int specialtyId, int clinicId, String date) throws RemoteException {
         
-        Map<Integer, String> slots = new HashMap<Integer, String>();
-        return slots;
+        Map<Integer, String> availableSlots = new HashMap<>();
+        try (Connection conn = MySQLConnection.getConnection()) {
+            // Comprobations to make sure the clinic and specialty exist
+            validateClinicExists(conn, clinicId);
+            validateSpecialtyInClinic(conn, clinicId, specialtyId);
+
+
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RemoteException("Error validating clinic and specialty.");
+        } 
+    
+        return availableSlots;
     }
 
     private int findAvailableDoctor(Connection conn, int clinicId, int specialtyId, String date, int slot) throws SQLException, RemoteException {
@@ -89,7 +123,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         if (rs.next()) {
             return rs.getInt("id");
         } else {
-            throw new RemoteException("No doctors available for this specialty and clinic at the selected slot.")
+            throw new RemoteException("No doctors available for this specialty and clinic at the selected slot.");
         }
     }
 
@@ -101,17 +135,9 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
                 throw new RemoteException("Invalid slot number. Slots range from 1 to 12.");
             }
 
-            // TODO Verify the clinic exists
-
-            // Verify the specialty belongs to the clinic
-            String checkSQL = "SELECT COUNT(*) FROM Specialties WHERE id = ? AND clinic_id = ?";
-            PreparedStatement checkStmt = conn.prepareStatement(checkSQL);
-            checkStmt.setInt(1, specialtyId);
-            checkStmt.setInt(2, clinicId);
-            ResultSet rs = checkStmt.executeQuery();
-            if (rs.next() && rs.getInt(1) == 0) {
-                throw new RemoteException("The specialty does not belong to the clinic.");
-            }
+            // Comprobations to make sure the clinic and specialty exist
+            validateClinicExists(conn, clinicId);
+            validateSpecialtyInClinic(conn, clinicId, specialtyId);
 
             // Find first available doctor for the first specialty
             int doctorId = findAvailableDoctor(conn, clinicId, specialtyId, date, slot);
