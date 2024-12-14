@@ -85,17 +85,30 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             throw new RemoteException("Clinic does not exist.");
         }
     }
-
+    
     private void validateSpecialtyInClinic(Connection conn, int clinicId, int specialtyId) throws SQLException, RemoteException {
+        System.out.println("Validando si la especialidad ID: " + specialtyId + " pertenece a la clínica ID: " + clinicId);
+    
         String sql = "SELECT COUNT(*) FROM Specialties WHERE id = ? AND clinic_id = ?";
+        System.out.println("Ejecutando SQL: " + sql);
+    
         PreparedStatement stmt = conn.prepareStatement(sql);
         stmt.setInt(1, specialtyId);
         stmt.setInt(2, clinicId);
+    
         ResultSet rs = stmt.executeQuery();
-        if (rs.next() && rs.getInt(1) == 0) {
-            throw new RemoteException("Specialty ID " + specialtyId + " does not belong to Clinic ID " + clinicId);
+        if (rs.next()) {
+            int count = rs.getInt(1);
+            System.out.println("Resultado de la consulta: " + count);
+            if (count == 0) {
+                throw new RemoteException("Specialty ID " + specialtyId + " does not belong to Clinic ID " + clinicId);
+            }
+        } else {
+            System.out.println("La consulta no devolvió resultados.");
+            throw new RemoteException("Error al validar la especialidad en la clínica.");
         }
     }
+    
 
     // Auxiliar method to convert slots to timetable
     private String slotToTime(int slot) throws RemoteException {
