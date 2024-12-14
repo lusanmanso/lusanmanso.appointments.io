@@ -93,7 +93,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         stmt.setInt(2, clinicId);
         ResultSet rs = stmt.executeQuery();
         if (rs.next() && rs.getInt(1) == 0) {
-            throw new RemoteException("Specialty does not belong to the selected clinic.");
+            throw new RemoteException("Specialty ID " + specialtyId + " does not belong to Clinic ID " + clinicId);
         }
     }
 
@@ -112,7 +112,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         return times[slot - 1];
     }
 
-    public Map<Integer, String> listAvailableSlots(int specialtyId, int clinicId, String date) throws RemoteException {
+    private Map<Integer, String> listAvailableSlots(int specialtyId, int clinicId, String date) throws RemoteException {
         
         Map<Integer, String> availableSlots = new HashMap<>();
         try (Connection conn = MySQLConnection.getConnection()) {
@@ -209,7 +209,6 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             throw new RemoteException("Error while booking the appointment.");
         }
     }
-
 
     /* 3. CANCEL APPOINTMENT */
     @Override
