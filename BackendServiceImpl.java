@@ -172,20 +172,24 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     @Override
     public void bookAppointment(int userId, int clinicId, int specialtyId, String date, int slot) throws RemoteException {
         try (Connection conn = MySQLConnection.getConnection()) {
-            // Validate slot number
-            if (slot < 1 || slot > 12 ) {
+            // Print the available slots before booking
+            Map<Integer, String> availableSlotsBefore = listAvailableSlots(specialtyId, clinicId, date);
+            System.out.println("Available slots before booking: " + availableSlotsBefore);
+
+            // Validate n of slots
+            if (slot < 1 || slot > 12) {
                 throw new RemoteException("Invalid slot number. Slots range from 1 to 12.");
             }
 
-            // Comprobations to make sure the clinic and specialty exist
+            // Validate clinic existance and specialty
             validateClinicExists(conn, clinicId);
             validateSpecialtyInClinic(conn, clinicId, specialtyId);
 
-            // Find first available doctor for the first specialty
+            
             int doctorId = findAvailableDoctor(conn, clinicId, specialtyId, date, slot);
 
             // Insert appointment
-            String sql = "INSERT INTO Appointments (user_id, specialty_id, doctor_id, appointmentd_date, appointment_slot) VALUES (?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO Appointments (user_id, specialty_id, doctor_id, appointment_date, appointment_slot) VALUES (?, ?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setInt(1, userId);
             stmt.setInt(2, specialtyId);
@@ -194,11 +198,18 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             stmt.setInt(5, slot);
             stmt.executeUpdate();
 
-            System.out.println("Appointment successfully booked for user " + userId + " with doctor " + doctorId + " at clinic " + clinicId + ".");        } catch (SQLException e) {
+            System.out.println("Appointment successfully booked for user " + userId + " with doctor " + doctorId + " at clinic " + clinicId + ".");
+
+             // Print the available slots after booking
+            Map<Integer, String> availableSlotsAfter = listAvailableSlots(specialtyId, clinicId, date);
+            System.out.println("Available slots after booking: " + availableSlotsAfter);
+
+        } catch (SQLException e) {
             e.printStackTrace();
             throw new RemoteException("Error while booking the appointment.");
         }
     }
+
 
     /* 3. CANCEL APPOINTMENT */
     @Override
