@@ -15,7 +15,7 @@ public class BackendServer {
 			System.out.println("BackendServerImpl instance started...");
 
 			System.out.println("Binding BackendServerImpl instance to RMI registry...");
-			Naming.rebind("rmi://127.0.0.1:5000/backendService", service);
+			Naming.rebind("rmi://192.168.1.184:5000/backendService", service);
 			System.out.println("Backend RMI server is running...");
 
 		} catch (RemoteException e) {
