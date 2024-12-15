@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
+import java.util.Random;
+
 // Password ciphering
 import java.nio.charset.StandardCharsets; // To work with UTF-8 encoding
 import java.security.MessageDigest; // Calculate (SHA-256) hashes
@@ -26,7 +28,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     }
 
     /* 1. REGISTER USER */
-    // First version of method to cipher passwords
+    // Method to cipher passwords
     private String hashPassword(String password) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -43,6 +45,33 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
+    // Generate unique ID (in this case for appointments but they can be used for anything)
+    private String generateUniqueId(Connection conn) throws SQLException {
+        String uniqueId;
+        Random random = new Random();
+        ResultSet rs = null;
+    
+        do {
+            // Generate an ID with APP format followed by 5 alphanumeric characters
+            StringBuilder idBuilder = new StringBuilder("APP");
+            for (int i = 0; i < 5; i++) {
+                char randomChar = (char) ('A' + random.nextInt(26)); // Generate random letter
+                idBuilder.append(randomChar);
+            }
+            uniqueId = idBuilder.toString();
+    
+            // Check if ID already exists in the db
+            String checkSql = "SELECT COUNT(*) FROM Appointments WHERE id = ?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setString(1, uniqueId);
+                rs = checkStmt.executeQuery();
+                rs.next();
+            }
+        } while (rs != null && rs.getInt(1) > 0); // Repeat if ID already exists
+    
+        return uniqueId;
+    }
+    
     private boolean isValidEmail(String email) {
         return email.matches("^[A-Za-z0-9+_.-]+@(.+)$"); 
     }
@@ -171,38 +200,44 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     @Override
     public void bookAppointment(String userEmail, String clinicId, String specialtyName, String date, int slot) throws RemoteException {
         try (Connection conn = MySQLConnection.getConnection()) {
+            System.out.println("Starting booking process for user: " + userEmail + ", clinicId: " + clinicId + ", specialtyName: " + specialtyName + ", date: " + date + ", slot: " + slot);
+    
             Map<Integer, String> availableSlotsBefore = listAvailableSlots(specialtyName, clinicId, date);
             System.out.println("Available slots before booking: " + availableSlotsBefore);
-
+    
             if (slot < 1 || slot > 12) {
                 throw new RemoteException("Invalid slot number. Slots range from 1 to 12.");
             }
-
+    
             validateClinicExists(conn, clinicId);
             validateSpecialtyInClinic(conn, clinicId, specialtyName);
-
+    
             String doctorId = findAvailableDoctor(conn, clinicId, specialtyName, date, slot);
-
-            String sql = "INSERT INTO Appointments (id, user_email, specialty_name, doctor_id, appointment_date, appointment_slot) " +
-                         "VALUES (UUID(), ?, ?, ?, ?, ?)";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, userEmail);
-            stmt.setString(2, specialtyName);
-            stmt.setString(3, doctorId);
-            stmt.setString(4, date);
-            stmt.setInt(5, slot);
+    
+            // Generar un ID único para la cita
+            String appointmentId = generateUniqueId(conn);
+            System.out.println("Generated Appointment ID: " + appointmentId);
+    
+            // Insertar la cita con el ID generado
+            String sqlInsert = "INSERT INTO Appointments (id, user_email, specialty_name, doctor_id, appointment_date, appointment_slot, clinic_id) " +
+                               "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            PreparedStatement stmt = conn.prepareStatement(sqlInsert);
+            stmt.setString(1, appointmentId);
+            stmt.setString(2, userEmail);
+            stmt.setString(3, specialtyName);
+            stmt.setString(4, doctorId);
+            stmt.setString(5, date);
+            stmt.setInt(6, slot);
+            stmt.setString(7, clinicId);
             stmt.executeUpdate();
-
-            System.out.println("Appointment successfully booked for user " + userEmail + " with doctor " + doctorId + " at clinic " + clinicId + ".");
-
-            Map<Integer, String> availableSlotsAfter = listAvailableSlots(specialtyName, clinicId, date);
-            System.out.println("Available slots after booking: " + availableSlotsAfter);
-
+    
+            System.out.println("Appointment successfully booked with ID: " + appointmentId);
         } catch (SQLException e) {
+            System.out.println("SQL Error during booking: " + e.getMessage());
             e.printStackTrace();
             throw new RemoteException("Error while booking the appointment.");
         }
-    }
+    }    
 
     /* 3. CANCEL APPOINTMENT */
     @Override
