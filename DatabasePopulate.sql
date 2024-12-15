@@ -1,50 +1,67 @@
 -- Insert clinics
 INSERT INTO Clinics (id, name) VALUES
-(1, 'Clinic A'),
-(2, 'Clinic B'),
-(3, 'Clinic C'),
-(4, 'Clinic D');
+('A', 'Clinic A'),
+('B', 'Clinic B'),
+('C', 'Clinic C'),
+('D', 'Clinic D');
 
 -- Insert specialties for each clinic
-INSERT INTO Specialties (id, name, clinic_id) VALUES
-(1, 'General Practice', 1),
-(2, 'Pediatrics', 1),
-(3, 'Cardiology', 1),
-(4, 'Gynecology', 1),
-(5, 'General Practice', 2),
-(6, 'Gynecology', 2),
-(7, 'Hematology', 2),
-(8, 'Tropical Medicine', 3),
-(9, 'Neurology', 3),
-(10, 'Ophthalmology', 4),
-(11, 'Oncology', 4),
-(12, 'Otorhinolaryngology', 4);
+INSERT INTO Specialties (name, clinic_id) VALUES
+('General Practice', 'A'),
+('Pediatrics', 'A'),
+('Cardiology', 'A'),
+('Gynecology', 'A'),
+('General Practice', 'B'),
+('Gynecology', 'B'),
+('Hematology', 'B'),
+('Tropical Medicine', 'C'),
+('Neurology', 'C'),
+('Ophthalmology', 'D'),
+('Oncology', 'D'),
+('Otorhinolaryngology', 'D');
 
 -- Clinic A
-INSERT INTO Doctors (name, specialty_id, clinic_id) VALUES
-('Doctor A1', 1, 1), ('Doctor A2', 1, 1), ('Doctor A3', 1, 1),
-('Doctor A4', 1, 1), ('Doctor A5', 1, 1), ('Doctor A6', 1, 1),
-('Doctor A7', 1, 1), ('Doctor A8', 1, 1), ('Doctor A9', 1, 1),
-('Doctor A10', 1, 1), -- General Practice (10 doctors)
-('Doctor A11', 2, 1), ('Doctor A12', 2, 1), ('Doctor A13', 2, 1),
-('Doctor A14', 2, 1), ('Doctor A15', 2, 1), -- Pediatrics (5 doctors)
-('Doctor A16', 3, 1), -- Cardiology (1 doctor)
-('Doctor A17', 4, 1), ('Doctor A18', 4, 1); -- Gynecology (2 doctors)
+-- Clinic A
+INSERT INTO Doctors (id, name, specialty_name, clinic_id) VALUES
+('DOCA1', 'Doctor A1', 'General Medicine', 'A'),
+('DOCA2', 'Doctor A2', 'General Medicine', 'A'),
+('DOCA3', 'Doctor A3', 'General Medicine', 'A'),
+('DOCA4', 'Doctor A4', 'General Medicine', 'A'),
+('DOCA5', 'Doctor A5', 'General Medicine', 'A'),
+('DOCA6', 'Doctor A6', 'General Medicine', 'A'),
+('DOCA7', 'Doctor A7', 'General Medicine', 'A'),
+('DOCA8', 'Doctor A8', 'General Medicine', 'A'),
+('DOCA9', 'Doctor A9', 'General Medicine', 'A'),
+('DOCA10', 'Doctor A10', 'General Medicine', 'A'), -- 10 doctors
+('DOCA11', 'Doctor A11', 'Pediatrics', 'A'),
+('DOCA12', 'Doctor A12', 'Pediatrics', 'A'),
+('DOCA13', 'Doctor A13', 'Pediatrics', 'A'),
+('DOCA14', 'Doctor A14', 'Pediatrics', 'A'),
+('DOCA15', 'Doctor A15', 'Pediatrics', 'A'), -- 5 doctors
+('DOCA16', 'Doctor A16', 'Cardiology', 'A'), -- 1 doctor
+('DOCA17', 'Doctor A17', 'Gynecology', 'A'),
+('DOCA18', 'Doctor A18', 'Gynecology', 'A'); -- 2 doctors
 
 -- Clinic B
-INSERT INTO Doctors (name, specialty_id, clinic_id) VALUES
-('Doctor B1', 5, 2), ('Doctor B2', 5, 2), ('Doctor B3', 5, 2),
-('Doctor B4', 5, 2), ('Doctor B5', 5, 2), -- General Practice (5 doctors)
-('Doctor B6', 6, 2), -- Gynecology (1 doctor)
-('Doctor B7', 7, 2); -- Hematology (1 doctor)
+INSERT INTO Doctors (id, name, specialty_name, clinic_id) VALUES
+('DOCB1', 'Doctor B1', 'General Medicine', 'B'),
+('DOCB2', 'Doctor B2', 'General Medicine', 'B'),
+('DOCB3', 'Doctor B3', 'General Medicine', 'B'),
+('DOCB4', 'Doctor B4', 'General Medicine', 'B'),
+('DOCB5', 'Doctor B5', 'General Medicine', 'B'), -- 5 doctors
+('DOCB6', 'Doctor B6', 'Gynecology', 'B'), -- 1 doctor
+('DOCB7', 'Doctor B7', 'Hematology', 'B'); -- 1 doctor
 
 -- Clinic C
-INSERT INTO Doctors (name, specialty_id, clinic_id) VALUES
-('Doctor C1', 8, 3), -- Tropical Medicine (1 doctor)
-('Doctor C2', 9, 3); -- Neurology (1 doctor)
+INSERT INTO Doctors (id, name, specialty_name, clinic_id) VALUES
+('DOCC1', 'Doctor C1', 'Tropical Medicine', 'C'), -- 1 doctor
+('DOCC2', 'Doctor C2', 'Neurology', 'C'); -- 1 doctor
 
 -- Clinic D
-INSERT INTO Doctors (name, specialty_id, clinic_id) VALUES
-('Doctor D1', 10, 4), ('Doctor D2', 10, 4), -- Ophthalmology (2 doctors)
-('Doctor D3', 11, 4), ('Doctor D4', 11, 4), ('Doctor D5', 11, 4), -- Oncology (3 doctors)
-('Doctor D6', 12, 4); -- Otorhinolaryngology (1 doctor)
+INSERT INTO Doctors (id, name, specialty_name, clinic_id) VALUES
+('DOCD1', 'Doctor D1', 'Ophthalmology', 'D'),
+('DOCD2', 'Doctor D2', 'Ophthalmology', 'D'), -- 2 doctors
+('DOCD3', 'Doctor D3', 'Oncology', 'D'),
+('DOCD4', 'Doctor D4', 'Oncology', 'D'),
+('DOCD5', 'Doctor D5', 'Oncology', 'D'), -- 3 doctors
+('DOCD6', 'Doctor D6', 'Otorhinolaryngology', 'D'); -- 1 doctor
