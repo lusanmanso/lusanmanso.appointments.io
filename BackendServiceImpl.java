@@ -1,4 +1,3 @@
-
 // import java.rmi.Naming;
 // import java.rmi.Remote;
 import java.rmi.RemoteException; // RemoteExceptions for RMI 
@@ -65,7 +64,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             stmt.setString(2, hashedPassword);
             stmt.executeUpdate();
 
-            System.out.println("User succesfully registered: " + email);
+            System.out.println("User successfully registered: " + email);
         } catch (SQLException e) {
             if (e.getErrorCode() == 1062) { // Error code for duplicated keys
                 throw new RemoteException("The email is already registered.");
@@ -76,41 +75,31 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     }
 
     /* 2. BOOK APPOINTMENT */
-    private void validateClinicExists(Connection conn, int clinicId) throws SQLException, RemoteException {
+    private void validateClinicExists(Connection conn, String clinicId) throws SQLException, RemoteException {
         String sql = "SELECT COUNT(*) FROM Clinics WHERE id = ?";
         PreparedStatement stmt = conn.prepareStatement(sql);
-        stmt.setInt(1, clinicId);
+        stmt.setString(1, clinicId);
         ResultSet rs = stmt.executeQuery();
         if (rs.next() && rs.getInt(1) == 0) {
             throw new RemoteException("Clinic does not exist.");
         }
     }
     
-    private void validateSpecialtyInClinic(Connection conn, int clinicId, int specialtyId) throws SQLException, RemoteException {
-        System.out.println("Validando si la especialidad ID: " + specialtyId + " pertenece a la clínica ID: " + clinicId);
+    private void validateSpecialtyInClinic(Connection conn, String clinicId, String specialtyName) throws SQLException, RemoteException {
+        System.out.println("Validating if specialty '" + specialtyName + "' belongs to clinic '" + clinicId + "'");
     
-        String sql = "SELECT COUNT(*) FROM Specialties WHERE id = ? AND clinic_id = ?";
-        System.out.println("Ejecutando SQL: " + sql);
-    
+        String sql = "SELECT COUNT(*) FROM Specialties WHERE name = ? AND clinic_id = ?";
         PreparedStatement stmt = conn.prepareStatement(sql);
-        stmt.setInt(1, specialtyId);
-        stmt.setInt(2, clinicId);
+        stmt.setString(1, specialtyName);
+        stmt.setString(2, clinicId);
     
         ResultSet rs = stmt.executeQuery();
-        if (rs.next()) {
-            int count = rs.getInt(1);
-            System.out.println("Resultado de la consulta: " + count);
-            if (count == 0) {
-                throw new RemoteException("Specialty ID " + specialtyId + " does not belong to Clinic ID " + clinicId);
-            }
-        } else {
-            System.out.println("La consulta no devolvió resultados.");
-            throw new RemoteException("Error al validar la especialidad en la clínica.");
+        if (rs.next() && rs.getInt(1) == 0) {
+            throw new RemoteException("Specialty '" + specialtyName + "' does not belong to clinic '" + clinicId + "'");
         }
     }
-    
 
-    // Auxiliar method to convert slots to timetable
+    // Auxiliary method to convert slots to timetable
     private String slotToTime(int slot) throws RemoteException {
         String[] times = {
             "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM",
@@ -118,37 +107,34 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM"
         };
 
-        // ? SHOULD THE COMPROBATION BE HERE?
         if (slot < 1 || slot > 12) {
             throw new RemoteException("Invalid slot number. Slots range from 1 to 12.");
         }
         return times[slot - 1];
     }
 
-    private Map<Integer, String> listAvailableSlots(int specialtyId, int clinicId, String date) throws RemoteException {
-        
+    private Map<Integer, String> listAvailableSlots(String specialtyName, String clinicId, String date) throws RemoteException {
         Map<Integer, String> availableSlots = new HashMap<>();
         try (Connection conn = MySQLConnection.getConnection()) {
-            // Comprobations to make sure the clinic and specialty exist
             validateClinicExists(conn, clinicId);
-            validateSpecialtyInClinic(conn, clinicId, specialtyId);
+            validateSpecialtyInClinic(conn, clinicId, specialtyName);
 
             for (int i = 1; i <= 12; i++) {
                 availableSlots.put(i, slotToTime(i));
             }
 
-            String sql = "SELECT appointments_slot FROM Appointments a " +
+            String sql = "SELECT appointment_slot FROM Appointments a " +
                          "JOIN Doctors d ON a.doctor_id = d.id " +
-                         "WHERE d.specialty_id = ? AND d.clinic_id = ? AND a.appointment_date = ? ";
+                         "WHERE d.specialty_name = ? AND d.clinic_id = ? AND a.appointment_date = ? ";
             
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, specialtyId);
-            stmt.setInt(2, clinicId);
+            stmt.setString(1, specialtyName);
+            stmt.setString(2, clinicId);
             stmt.setString(3, date);
 
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
-                int bookedSlot = rs.getInt("appointments_slot");
+                int bookedSlot = rs.getInt("appointment_slot");
                 availableSlots.remove(bookedSlot); // Delete occupied slots
             }
         } catch (SQLException e) {
@@ -159,62 +145,57 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         return availableSlots;
     }
 
-    private int findAvailableDoctor(Connection conn, int clinicId, int specialtyId, String date, int slot) throws SQLException, RemoteException {
+    private String findAvailableDoctor(Connection conn, String clinicId, String specialtyName, String date, int slot) throws SQLException, RemoteException {
         // Find first available doctor for the clinic
         String sql = "SELECT d.id FROM Doctors d " + 
-                     "WHERE d.specialty_id = ? AND d.clinic_id = ? " +
+                     "WHERE d.specialty_name = ? AND d.clinic_id = ? " +
                      "AND d.id NOT IN (" +
                      "  SELECT doctor_id FROM Appointments " +
                      "  WHERE appointment_date = ? AND appointment_slot = ?" +
                      ") LIMIT 1";
 
         PreparedStatement stmt = conn.prepareStatement(sql);
-        stmt.setInt(1, specialtyId);
-        stmt.setInt(2, clinicId);
+        stmt.setString(1, specialtyName);
+        stmt.setString(2, clinicId);
         stmt.setString(3, date);
         stmt.setInt(4, slot);
 
         ResultSet rs = stmt.executeQuery();
         if (rs.next()) {
-            return rs.getInt("id");
+            return rs.getString("id");
         } else {
             throw new RemoteException("No doctors available for this specialty and clinic at the selected slot.");
         }
     }
 
     @Override
-    public void bookAppointment(int userId, int clinicId, int specialtyId, String date, int slot) throws RemoteException {
+    public void bookAppointment(String userEmail, String clinicId, String specialtyName, String date, int slot) throws RemoteException {
         try (Connection conn = MySQLConnection.getConnection()) {
-            // Print the available slots before booking
-            Map<Integer, String> availableSlotsBefore = listAvailableSlots(specialtyId, clinicId, date);
+            Map<Integer, String> availableSlotsBefore = listAvailableSlots(specialtyName, clinicId, date);
             System.out.println("Available slots before booking: " + availableSlotsBefore);
 
-            // Validate n of slots
             if (slot < 1 || slot > 12) {
                 throw new RemoteException("Invalid slot number. Slots range from 1 to 12.");
             }
 
-            // Validate clinic existance and specialty
             validateClinicExists(conn, clinicId);
-            validateSpecialtyInClinic(conn, clinicId, specialtyId);
+            validateSpecialtyInClinic(conn, clinicId, specialtyName);
 
-            
-            int doctorId = findAvailableDoctor(conn, clinicId, specialtyId, date, slot);
+            String doctorId = findAvailableDoctor(conn, clinicId, specialtyName, date, slot);
 
-            // Insert appointment
-            String sql = "INSERT INTO Appointments (user_id, specialty_id, doctor_id, appointment_date, appointment_slot) VALUES (?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO Appointments (id, user_email, specialty_name, doctor_id, appointment_date, appointment_slot) " +
+                         "VALUES (UUID(), ?, ?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, userId);
-            stmt.setInt(2, specialtyId);
-            stmt.setInt(3, doctorId);
+            stmt.setString(1, userEmail);
+            stmt.setString(2, specialtyName);
+            stmt.setString(3, doctorId);
             stmt.setString(4, date);
             stmt.setInt(5, slot);
             stmt.executeUpdate();
 
-            System.out.println("Appointment successfully booked for user " + userId + " with doctor " + doctorId + " at clinic " + clinicId + ".");
+            System.out.println("Appointment successfully booked for user " + userEmail + " with doctor " + doctorId + " at clinic " + clinicId + ".");
 
-             // Print the available slots after booking
-            Map<Integer, String> availableSlotsAfter = listAvailableSlots(specialtyId, clinicId, date);
+            Map<Integer, String> availableSlotsAfter = listAvailableSlots(specialtyName, clinicId, date);
             System.out.println("Available slots after booking: " + availableSlotsAfter);
 
         } catch (SQLException e) {
@@ -225,12 +206,11 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
 
     /* 3. CANCEL APPOINTMENT */
     @Override
-    public void cancelAppointment(int appointmentId) throws RemoteException {
+    public void cancelAppointment(String appointmentId) throws RemoteException {
         try (Connection conn = MySQLConnection.getConnection()) {
-            // Delete appointment
             String sql = "DELETE FROM Appointments WHERE id = ?";
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, appointmentId);
+            stmt.setString(1, appointmentId);
 
             int rowsAffected = stmt.executeUpdate();
 
@@ -248,18 +228,17 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
 
     /* 4. LIST APPOINTMENTS */
     @Override
-    public List<String> listAppointments(int userId) throws RemoteException {
-        List<String> appointments = new ArrayList<String>();
+    public List<String> listAppointments(String userEmail) throws RemoteException {
+        List<String> appointments = new ArrayList<>();
         try (Connection conn = MySQLConnection.getConnection()) {
-        
             String sql = "SELECT a.appointment_date, a.appointment_slot, d.name AS doctor_name, s.name AS specialty_name " +
                         "FROM Appointments a " +
                         "JOIN Doctors d ON a.doctor_id = d.id " +
-                        "JOIN Specialties s ON a.specialty_id = s.id " +
-                        "WHERE a.user_id = ?";
+                        "JOIN Specialties s ON a.specialty_name = s.name " +
+                        "WHERE a.user_email = ?";
             
             PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, userId);
+            stmt.setString(1, userEmail);
 
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
