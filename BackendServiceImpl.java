@@ -49,28 +49,28 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     private String generateUniqueId(Connection conn) throws SQLException {
         String uniqueId;
         Random random = new Random();
-        ResultSet rs = null;
+        int count;
     
         do {
-            // Generate an ID with APP format followed by 5 alphanumeric characters
             StringBuilder idBuilder = new StringBuilder("APP");
             for (int i = 0; i < 5; i++) {
-                char randomChar = (char) ('A' + random.nextInt(26)); // Generate random letter
+                char randomChar = (char) ('A' + random.nextInt(26)); 
                 idBuilder.append(randomChar);
             }
             uniqueId = idBuilder.toString();
     
-            // Check if ID already exists in the db
             String checkSql = "SELECT COUNT(*) FROM Appointments WHERE id = ?";
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
                 checkStmt.setString(1, uniqueId);
-                rs = checkStmt.executeQuery();
-                rs.next();
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    rs.next();
+                    count = rs.getInt(1);
+                }
             }
-        } while (rs != null && rs.getInt(1) > 0); // Repeat if ID already exists
+        } while (count > 0);
     
         return uniqueId;
-    }
+    }    
     
     private boolean isValidEmail(String email) {
         return email.matches("^[A-Za-z0-9+_.-]+@(.+)$"); 
