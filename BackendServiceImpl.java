@@ -219,16 +219,17 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             System.out.println("Generated Appointment ID: " + appointmentId);
     
             // Insertar la cita con el ID generado
-            String sqlInsert = "INSERT INTO Appointments (id, user_email, specialty_name, doctor_id, appointment_date, appointment_slot, clinic_id) " +
-                               "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            String sqlInsert = "INSERT INTO Appointments (id, user_email, specialty_name, doctor_id, appointment_date, appointment_slot) " +
+                               "VALUES (?, ?, ?, ?, ?, ?)";
+
             PreparedStatement stmt = conn.prepareStatement(sqlInsert);
             stmt.setString(1, appointmentId);
             stmt.setString(2, userEmail);
             stmt.setString(3, specialtyName);
             stmt.setString(4, doctorId);
             stmt.setString(5, date);
-            stmt.setInt(6, slot);
-            stmt.setString(7, clinicId);
+            stmt.setInt(6, slot);  // Elimina stmt.setString(7, clinicId);
+            
             stmt.executeUpdate();
     
             System.out.println("Appointment successfully booked with ID: " + appointmentId);
