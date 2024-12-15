@@ -268,10 +268,10 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         List<String> appointments = new ArrayList<>();
         try (Connection conn = MySQLConnection.getConnection()) {
             String sql = "SELECT a.appointment_date, a.appointment_slot, d.name AS doctor_name, s.name AS specialty_name " +
-                        "FROM Appointments a " +
-                        "JOIN Doctors d ON a.doctor_id = d.id " +
-                        "JOIN Specialties s ON a.specialty_name = s.name " +
-                        "WHERE a.user_email = ?";
+                         "FROM Appointments a " +
+                         "JOIN Doctors d ON a.doctor_id = d.id " +
+                         "JOIN Specialties s ON a.specialty_name = s.name AND a.clinic_id = s.clinic_id " +
+                         "WHERE a.user_email = ?";
             
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, userEmail);
