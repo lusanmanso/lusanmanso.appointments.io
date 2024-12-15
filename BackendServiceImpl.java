@@ -137,6 +137,12 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
         return times[slot - 1];
     }
+    
+    // Getter
+    @Override
+    public Map<Integer, String> getAvailableSlots(String specialtyName, String clinicId, String date) throws RemoteException {
+        return listAvailableSlots(specialtyName, clinicId, date);
+    }
 
     private Map<Integer, String> listAvailableSlots(String specialtyName, String clinicId, String date) throws RemoteException {
         Map<Integer, String> availableSlots = new HashMap<>();
@@ -251,8 +257,9 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             System.out.println("Generated Appointment ID: " + appointmentId);
     
             // Insert the appointment
-            String sqlInsert = "INSERT INTO Appointments (id, user_email, specialty_name, doctor_id, appointment_date, appointment_slot) " +
-                               "VALUES (?, ?, ?, ?, ?, ?)";
+            String sqlInsert = "INSERT INTO Appointments (id, user_email, specialty_name, doctor_id, appointment_date, appointment_slot, clinic_id) " +
+                                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
             PreparedStatement stmt = conn.prepareStatement(sqlInsert);
             stmt.setString(1, appointmentId);
             stmt.setString(2, userEmail);
@@ -260,9 +267,10 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             stmt.setString(4, doctorId);
             stmt.setString(5, date);
             stmt.setInt(6, slot);
+            stmt.setString(7, clinicId); // Add this field
             
             stmt.executeUpdate();
-    
+                
             System.out.println("Appointment successfully booked with ID: " + appointmentId);
         } catch (SQLException e) {
             System.out.println("SQL Error during booking: " + e.getMessage());
