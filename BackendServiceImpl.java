@@ -267,7 +267,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     public List<String> listAppointments(String userEmail) throws RemoteException {
         List<String> appointments = new ArrayList<>();
         try (Connection conn = MySQLConnection.getConnection()) {
-            String sql = "SELECT a.appointment_date, a.appointment_slot, d.name AS doctor_name, s.name AS specialty_name " +
+            String sql = "SELECT a.id, a.appointment_date, a.appointment_slot, d.name AS doctor_name, s.name AS specialty_name " +
                          "FROM Appointments a " +
                          "JOIN Doctors d ON a.doctor_id = d.id " +
                          "JOIN Specialties s ON a.specialty_name = s.name AND a.clinic_id = s.clinic_id " +
@@ -275,10 +275,11 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, userEmail);
-
+    
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
-                String appointment = "Date: " + rs.getString("appointment_date") +
+                String appointment = "ID: " + rs.getString("id") + 
+                                     " Date: " + rs.getString("appointment_date") +
                                      " Slot: " + rs.getString("appointment_slot") +
                                      " Doctor: " + rs.getString("doctor_name") +
                                      " Specialty: " + rs.getString("specialty_name");
@@ -290,4 +291,5 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
         return appointments;
     }
+
 }
