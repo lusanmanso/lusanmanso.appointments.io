@@ -6,41 +6,38 @@ DROP TABLE IF EXISTS Clinics;
 DROP TABLE IF EXISTS Users;
 
 CREATE TABLE Users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(100) PRIMARY KEY, -- Use email as ID
     password VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE Clinics (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL
+    id CHAR(1) PRIMARY KEY, -- A, B, C, D
+    name VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE Specialties (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    clinic_id INT,
+    name VARCHAR(100) PRIMARY KEY, -- Use specialty name as ID
+    clinic_id CHAR(1) NOT NULL,
     FOREIGN KEY (clinic_id) REFERENCES Clinics(id)
 );
 
 CREATE TABLE Doctors (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    specialty_id INT NOT NULL,
-    clinic_id INT NOT NULL,
-    FOREIGN KEY (specialty_id) REFERENCES Specialties(id),
+    id VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    specialty_name VARCHAR(50) NOT NULL, 
+    clinic_id CHAR(1) NOT NULL,
+    FOREIGN KEY (specialty_name) REFERENCES Specialties(name),
     FOREIGN KEY (clinic_id) REFERENCES Clinics(id)
 );
 
 CREATE TABLE Appointments (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    specialty_id INT NOT NULL,
-    doctor_id INT NOT NULL,
+    id VARCHAR(10) PRIMARY KEY,
+    user_email VARCHAR(100) NOT NULL,
+    specialty_name VARCHAR(50)NOT NULL,
+    doctor_id VARCHAR(10) NOT NULL,
     appointment_date DATE NOT NULL,
     appointment_slot INT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES Users(id),
-    FOREIGN KEY (specialty_id) REFERENCES Specialties(id),
+    FOREIGN KEY (user_email) REFERENCES Users(id),
+    FOREIGN KEY (specialty_name) REFERENCES Specialties(name),
     FOREIGN KEY (doctor_id) REFERENCES Doctors(id),
-    UNIQUE (doctor_id, appointment_date, appointment_slot)
 );
