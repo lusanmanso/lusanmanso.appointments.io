@@ -150,7 +150,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             validateClinicExists(conn, clinicId);
             validateSpecialtyInClinic(conn, clinicId, specialtyName);
     
-            // Primero, obtener el número total de doctores para esa especialidad y clínica
+            // Obtain the total number of doctors for that specialty and clinic
             String countDoctorsSql = "SELECT COUNT(*) FROM Doctors WHERE specialty_name = ? AND clinic_id = ?";
             int totalDoctors = 0;
             try (PreparedStatement countDoctorsStmt = conn.prepareStatement(countDoctorsSql)) {
@@ -163,12 +163,12 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
                 }
             }
     
-            // Inicializar todos los slots (1 a 12)
+            // Initialize all slots (1 to 12)
             for (int i = 1; i <= 12; i++) {
                 availableSlots.put(i, slotToTime(i));
             }
     
-            // Contar cuantas citas hay por slot
+            // Count how many appointments are booked per slot
             String sql = "SELECT appointment_slot, COUNT(*) as booked_count " +
                          "FROM Appointments a " +
                          "JOIN Doctors d ON a.doctor_id = d.id " +
@@ -185,8 +185,8 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
                         int bookedSlot = rs.getInt("appointment_slot");
                         int bookedCount = rs.getInt("booked_count");
     
-                        // Si el número de citas = número total de doctores, 
-                        // significa que no hay doctores libres para ese slot
+                        // If the number of appointments = total number of doctors, 
+                        // it means there are no doctors available for that slot
                         if (bookedCount >= totalDoctors) {
                             availableSlots.remove(bookedSlot);
                         }
@@ -228,7 +228,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     @Override
     public void registerUser(String email, String password) throws RemoteException {
         try (Connection conn = MySQLConnection.getConnection()) {
-            // Validar formato del email
+            // Validate email format
             if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
                 throw new RemoteException(("Invalid email format."));
             }
@@ -245,7 +245,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
 
             System.out.println("User successfully registered: " + email);
         } catch (SQLException e) {
-            if (e.getErrorCode() == 1062) { // Error code para llaves duplicadas
+            if (e.getErrorCode() == 1062) { // Error code for duplicated keys
                 throw new RemoteException("The email is already registered.");
             }
             e.printStackTrace();
@@ -259,7 +259,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         
         // Validate user credentials
         if (!isValidEmail(userEmail, password)) {
-            throw new RemoteException("Credenciales inválidas. Por favor revise su email y contraseña.");
+            throw new RemoteException("Invalid credentials. Please check your email and password.");
         }
 
         try (Connection conn = MySQLConnection.getConnection()) {
@@ -310,7 +310,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
 
         // Validate user credentials
         if (!isValidEmail(userEmail, password)) {
-            throw new RemoteException("Credenciales inválidas.");
+            throw new RemoteException("Invalid credentials.");
         }
 
         try (Connection conn = MySQLConnection.getConnection()) {
@@ -322,7 +322,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             int rowsAffected = stmt.executeUpdate();
 
             if (rowsAffected == 0) {
-                throw new RemoteException("La cita no existe o no pertenece al usuario.");
+                throw new RemoteException("Appointment non-existent or does not belong to the user.");
             }
 
             System.out.println("Appointment cancelled successfully.");
@@ -339,7 +339,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         
         // Validate user credentials
         if (!isValidEmail(userEmail, password)) {
-            throw new RemoteException("Credenciales inválidas.");
+            throw new RemoteException("Invalid credentials.");
         }
 
         List<String> appointments = new ArrayList<>();
