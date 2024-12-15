@@ -11,7 +11,7 @@ public class RMIClient {
             System.out.println("User registered successfully!");
 
             // Test: List appointments
-            System.out.println("Appointments: " + service.listAppointments("test@example.com"));
+            System.out.println("Appointments: " + service.listAppointments("test@example.com", "4321"));
 
         } catch (Exception e) {
             e.printStackTrace();

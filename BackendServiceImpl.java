@@ -1,5 +1,3 @@
-// import java.rmi.Naming;
-// import java.rmi.Remote;
 import java.rmi.RemoteException; // RemoteExceptions for RMI 
 import java.rmi.server.UnicastRemoteObject; // RMI Classes implementation
 
@@ -27,8 +25,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         super();
     }
 
-    /* 1. REGISTER USER */
-    // Method to cipher passwords
+    /* --- Auxiliary methods for security and credentials --- */
     private String hashPassword(String password) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -45,7 +42,39 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
-    // Generate unique ID (in this case for appointments but they can be used for anything)
+    private boolean validateUserCredentials(String userEmail, String password) throws SQLException {
+        String sql = "SELECT password FROM Users WHERE email = ?";
+        try (Connection conn = MySQLConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userEmail);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                String storedHashedPassword = rs.getString("password");
+                String hashedInputPassword = hashPassword(password);
+                return storedHashedPassword.equals(hashedInputPassword);
+            }
+            return false;
+        }
+    }
+
+    private boolean isValidEmail(String email, String password) {
+        // Validate email format
+        if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            return false;
+        }
+
+        // Validar user credentials
+        try {
+            return validateUserCredentials(email, password);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /* --- Auxiliary methods for appointment scheduling --- */
+
+    // Generate an unique ID for the appointment
     private String generateUniqueId(Connection conn) throws SQLException {
         String uniqueId;
         Random random = new Random();
@@ -70,40 +99,8 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         } while (count > 0);
     
         return uniqueId;
-    }    
-    
-    private boolean isValidEmail(String email) {
-        return email.matches("^[A-Za-z0-9+_.-]+@(.+)$"); 
     }
 
-    @Override
-    public void registerUser(String email, String password) throws RemoteException {
-        try (Connection conn = MySQLConnection.getConnection()) {
-            if (!isValidEmail(email)) {
-                throw new RemoteException(("Invalid email format."));
-            }
-
-            // Cipher passwords for further security
-            String hashedPassword = hashPassword(password);
-
-            // SQL consult
-            String sql = "INSERT INTO Users (email, password) VALUES (?, ?)";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, email);
-            stmt.setString(2, hashedPassword);
-            stmt.executeUpdate();
-
-            System.out.println("User successfully registered: " + email);
-        } catch (SQLException e) {
-            if (e.getErrorCode() == 1062) { // Error code for duplicated keys
-                throw new RemoteException("The email is already registered.");
-            }
-            e.printStackTrace();
-            throw new RemoteException("Error registering user.");
-        }
-    }
-
-    /* 2. BOOK APPOINTMENT */
     private void validateClinicExists(Connection conn, String clinicId) throws SQLException, RemoteException {
         String sql = "SELECT COUNT(*) FROM Clinics WHERE id = ?";
         PreparedStatement stmt = conn.prepareStatement(sql);
@@ -128,7 +125,6 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
-    // Auxiliary method to convert slots to timetable
     private String slotToTime(int slot) throws RemoteException {
         String[] times = {
             "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM",
@@ -164,7 +160,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 int bookedSlot = rs.getInt("appointment_slot");
-                availableSlots.remove(bookedSlot); // Delete occupied slots
+                availableSlots.remove(bookedSlot); // Eliminar slots ocupados
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -175,7 +171,7 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     }
 
     private String findAvailableDoctor(Connection conn, String clinicId, String specialtyName, String date, int slot) throws SQLException, RemoteException {
-        // Find first available doctor for the clinic
+        // Find the first doctor available in the clinic with that specialty
         String sql = "SELECT d.id FROM Doctors d " + 
                      "WHERE d.specialty_name = ? AND d.clinic_id = ? " +
                      "AND d.id NOT IN (" +
@@ -197,8 +193,44 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
+    /* --- 1. REGISTER USER --- */
     @Override
-    public void bookAppointment(String userEmail, String clinicId, String specialtyName, String date, int slot) throws RemoteException {
+    public void registerUser(String email, String password) throws RemoteException {
+        try (Connection conn = MySQLConnection.getConnection()) {
+            // Validar formato del email
+            if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                throw new RemoteException(("Invalid email format."));
+            }
+
+            // Cipher the password
+            String hashedPassword = hashPassword(password);
+
+            // Insert the user
+            String sql = "INSERT INTO Users (email, password) VALUES (?, ?)";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, email);
+            stmt.setString(2, hashedPassword);
+            stmt.executeUpdate();
+
+            System.out.println("User successfully registered: " + email);
+        } catch (SQLException e) {
+            if (e.getErrorCode() == 1062) { // Error code para llaves duplicadas
+                throw new RemoteException("The email is already registered.");
+            }
+            e.printStackTrace();
+            throw new RemoteException("Error registering user.");
+        }
+    }
+
+    /* --- 2. BOOK APPOINTMENT --- */
+    @Override
+    public void bookAppointment(String userEmail, String password, String clinicId, String specialtyName, String date, int slot) throws RemoteException {
+        
+        // Validate user credentials
+        if (!isValidEmail(userEmail, password)) {
+            throw new RemoteException("Credenciales inválidas. Por favor revise su email y contraseña.");
+        }
+
         try (Connection conn = MySQLConnection.getConnection()) {
             System.out.println("Starting booking process for user: " + userEmail + ", clinicId: " + clinicId + ", specialtyName: " + specialtyName + ", date: " + date + ", slot: " + slot);
     
@@ -214,21 +246,20 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
     
             String doctorId = findAvailableDoctor(conn, clinicId, specialtyName, date, slot);
     
-            // Generar un ID único para la cita
+            // Generate unique ID for the appointment
             String appointmentId = generateUniqueId(conn);
             System.out.println("Generated Appointment ID: " + appointmentId);
     
-            // Insertar la cita con el ID generado
+            // Insert the appointment
             String sqlInsert = "INSERT INTO Appointments (id, user_email, specialty_name, doctor_id, appointment_date, appointment_slot) " +
                                "VALUES (?, ?, ?, ?, ?, ?)";
-
             PreparedStatement stmt = conn.prepareStatement(sqlInsert);
             stmt.setString(1, appointmentId);
             stmt.setString(2, userEmail);
             stmt.setString(3, specialtyName);
             stmt.setString(4, doctorId);
             stmt.setString(5, date);
-            stmt.setInt(6, slot);  // Elimina stmt.setString(7, clinicId);
+            stmt.setInt(6, slot);
             
             stmt.executeUpdate();
     
@@ -240,18 +271,25 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }    
 
-    /* 3. CANCEL APPOINTMENT */
+    /* --- 3. CANCEL APPOINTMENT --- */
     @Override
-    public void cancelAppointment(String appointmentId) throws RemoteException {
+    public void cancelAppointment(String userEmail, String password, String appointmentId) throws RemoteException {
+
+        // Validate user credentials
+        if (!isValidEmail(userEmail, password)) {
+            throw new RemoteException("Credenciales inválidas.");
+        }
+
         try (Connection conn = MySQLConnection.getConnection()) {
-            String sql = "DELETE FROM Appointments WHERE id = ?";
+            String sql = "DELETE FROM Appointments WHERE id = ? AND user_email = ?";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, appointmentId);
+            stmt.setString(2, userEmail); 
 
             int rowsAffected = stmt.executeUpdate();
 
             if (rowsAffected == 0) {
-                throw new RemoteException("The appointment does not exist.");
+                throw new RemoteException("La cita no existe o no pertenece al usuario.");
             }
 
             System.out.println("Appointment cancelled successfully.");
@@ -262,20 +300,26 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
     }
 
-    /* 4. LIST APPOINTMENTS */
+    /* --- 4. LIST APPOINTMENTS --- */
     @Override
-    public List<String> listAppointments(String userEmail) throws RemoteException {
+    public List<String> listAppointments(String userEmail, String password) throws RemoteException {
+        
+        // Validate user credentials
+        if (!isValidEmail(userEmail, password)) {
+            throw new RemoteException("Credenciales inválidas.");
+        }
+
         List<String> appointments = new ArrayList<>();
         try (Connection conn = MySQLConnection.getConnection()) {
             String sql = "SELECT a.id, a.appointment_date, a.appointment_slot, d.name AS doctor_name, s.name AS specialty_name " +
                          "FROM Appointments a " +
                          "JOIN Doctors d ON a.doctor_id = d.id " +
-                         "JOIN Specialties s ON a.specialty_name = s.name AND a.clinic_id = s.clinic_id " +
+                         "JOIN Specialties s ON a.specialty_name = s.name AND d.clinic_id = s.clinic_id " +
                          "WHERE a.user_email = ?";
             
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, userEmail);
-    
+
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 String appointment = "ID: " + rs.getString("id") + 
@@ -291,5 +335,4 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         }
         return appointments;
     }
-
 }
