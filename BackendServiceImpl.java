@@ -149,29 +149,54 @@ public class BackendServiceImpl extends UnicastRemoteObject implements BackendSe
         try (Connection conn = MySQLConnection.getConnection()) {
             validateClinicExists(conn, clinicId);
             validateSpecialtyInClinic(conn, clinicId, specialtyName);
-
+    
+            // Primero, obtener el número total de doctores para esa especialidad y clínica
+            String countDoctorsSql = "SELECT COUNT(*) FROM Doctors WHERE specialty_name = ? AND clinic_id = ?";
+            int totalDoctors = 0;
+            try (PreparedStatement countDoctorsStmt = conn.prepareStatement(countDoctorsSql)) {
+                countDoctorsStmt.setString(1, specialtyName);
+                countDoctorsStmt.setString(2, clinicId);
+                try (ResultSet rs = countDoctorsStmt.executeQuery()) {
+                    if (rs.next()) {
+                        totalDoctors = rs.getInt(1);
+                    }
+                }
+            }
+    
+            // Inicializar todos los slots (1 a 12)
             for (int i = 1; i <= 12; i++) {
                 availableSlots.put(i, slotToTime(i));
             }
-
-            String sql = "SELECT appointment_slot FROM Appointments a " +
+    
+            // Contar cuantas citas hay por slot
+            String sql = "SELECT appointment_slot, COUNT(*) as booked_count " +
+                         "FROM Appointments a " +
                          "JOIN Doctors d ON a.doctor_id = d.id " +
-                         "WHERE d.specialty_name = ? AND d.clinic_id = ? AND a.appointment_date = ? ";
-            
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, specialtyName);
-            stmt.setString(2, clinicId);
-            stmt.setString(3, date);
-
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                int bookedSlot = rs.getInt("appointment_slot");
-                availableSlots.remove(bookedSlot); // Eliminar slots ocupados
+                         "WHERE d.specialty_name = ? AND d.clinic_id = ? AND a.appointment_date = ? " +
+                         "GROUP BY appointment_slot";
+    
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, specialtyName);
+                stmt.setString(2, clinicId);
+                stmt.setString(3, date);
+    
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        int bookedSlot = rs.getInt("appointment_slot");
+                        int bookedCount = rs.getInt("booked_count");
+    
+                        // Si el número de citas = número total de doctores, 
+                        // significa que no hay doctores libres para ese slot
+                        if (bookedCount >= totalDoctors) {
+                            availableSlots.remove(bookedSlot);
+                        }
+                    }
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
             throw new RemoteException("Error validating clinic and specialty.");
-        } 
+        }
     
         return availableSlots;
     }
