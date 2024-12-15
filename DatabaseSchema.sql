@@ -43,7 +43,9 @@ CREATE TABLE Appointments (
     doctor_id VARCHAR(10) NOT NULL,
     appointment_date DATE NOT NULL,
     appointment_slot INT NOT NULL,
+    clinic_id CHAR(1) NOT NULL,
     FOREIGN KEY (user_email) REFERENCES Users(email),
     FOREIGN KEY (specialty_name) REFERENCES Specialties(name),
     FOREIGN KEY (doctor_id) REFERENCES Doctors(id)
+    FOREIGN KEY (clinic_id) REFERENCES Clinics(id)
 );
